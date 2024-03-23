@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decentralized Chat</title>
+</head>
+<body>
+    <h1>Decentralized Chat</h1>
+    
+    <button onclick="connectWallet()">Connect Wallet</button>
+    
+    <div id="chatDiv" style="display:none;">
+        <input type="text" id="receiverAddress" placeholder="Receiver Address">
+        <button onclick="openChat()">Open Chat</button>
+        
+        <div id="messages"></div>
+        
+        <input type="text" id="messageInput" placeholder="Type your message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+let web3;
+let contract;
+let userAddress;
+
+const DecentralizedChatABI = [
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "content",
+				"type": "string"
+			}
+		],
+		"name": "NewMessage",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_receiver",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_content",
+				"type": "string"
+			}
+		],
+		"name": "sendMessage",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_receiver",
+				"type": "address"
+			}
+		],
+		"name": "getMessages",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "sender",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "receiver",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "content",
+						"type": "string"
+					}
+				],
+				"internalType": "struct DecentralizedChat.Message[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+async function connectWallet() {
+    if (window.ethereum) {
+        try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            web3 = new Web3(window.ethereum);
+            const networkId = await web3.eth.net.getId();
+            contract = new web3.eth.Contract(DecentralizedChatABI, '0xADa92A263dCFB7B0854eb99b76B8FE1b4225F626');
+            userAddress = (await web3.eth.getAccounts())[0];
+            document.getElementById('chatDiv').style.display = 'block';
+        } catch (error) {
+            console.error("User denied account access");
+        }
+    } else {
+        alert("Please install MetaMask!");
+    }
+}
+
+async function openChat() {
+    const receiverAddress = document.getElementById('receiverAddress').value;
+    const messages = await contract.methods.getMessages(receiverAddress).call({ from: userAddress });
+    displayMessages(messages);
+}
+
+function displayMessages(messages) {
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML = '';
+    messages.forEach(message => {
+        const messageDiv = document.createElement('div');
+        messageDiv.textContent = `${message.sender}: ${message.content}`;
+        messagesDiv.appendChild(messageDiv);
+    });
+}
+
+async function sendMessage() {
+    const receiverAddress = document.getElementById('receiverAddress').value;
+    const messageContent = document.getElementById('messageInput').value;
+    await contract.methods.sendMessage(receiverAddress, messageContent).send({ from: userAddress });
+    document.getElementById('messageInput').value = '';
+    openChat();
+}
+
+      
+    </script>
+</body>
+</html>
