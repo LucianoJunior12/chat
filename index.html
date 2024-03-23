@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Decentralized Chat</title>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.3.0/dist/web3.min.js"></script>
 </head>
 <body>
     <h1>Decentralized Chat</h1>
@@ -21,7 +22,7 @@
     </div>
 
     <script>
-let web3;
+	    let web3;
 let contract;
 let userAddress;
 
@@ -110,11 +111,11 @@ const DecentralizedChatABI = [
 async function connectWallet() {
     if (window.ethereum) {
         try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            userAddress = accounts[0];
             web3 = new Web3(window.ethereum);
             const networkId = await web3.eth.net.getId();
             contract = new web3.eth.Contract(DecentralizedChatABI, '0xADa92A263dCFB7B0854eb99b76B8FE1b4225F626');
-            userAddress = (await web3.eth.getAccounts())[0];
             document.getElementById('chatDiv').style.display = 'block';
         } catch (error) {
             console.error("User denied account access");
@@ -126,8 +127,12 @@ async function connectWallet() {
 
 async function openChat() {
     const receiverAddress = document.getElementById('receiverAddress').value;
-    const messages = await contract.methods.getMessages(receiverAddress).call({ from: userAddress });
-    displayMessages(messages);
+    try {
+        const messages = await contract.methods.getMessages(receiverAddress).call({ from: userAddress });
+        displayMessages(messages);
+    } catch (error) {
+        console.error("Error fetching messages:", error);
+    }
 }
 
 function displayMessages(messages) {
@@ -143,12 +148,15 @@ function displayMessages(messages) {
 async function sendMessage() {
     const receiverAddress = document.getElementById('receiverAddress').value;
     const messageContent = document.getElementById('messageInput').value;
-    await contract.methods.sendMessage(receiverAddress, messageContent).send({ from: userAddress });
-    document.getElementById('messageInput').value = '';
-    openChat();
+    try {
+        await contract.methods.sendMessage(receiverAddress, messageContent).send({ from: userAddress });
+        document.getElementById('messageInput').value = '';
+        openChat();
+    } catch (error) {
+        console.error("Error sending message:", error);
+    }
 }
 
-      
     </script>
 </body>
 </html>
